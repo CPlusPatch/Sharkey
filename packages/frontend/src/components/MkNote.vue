@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:class="[$style.root, { [$style.showActionsOnlyHover]: defaultStore.state.showNoteActionsOnlyHover }]"
 	:tabindex="!isDeleted ? '-1' : undefined"
 >
-	<MkNoteSub v-if="appearNote.reply && !renoteCollapsed" :meta="props.meta" :note="appearNote.reply" :class="$style.replyTo"/>
+	<MkNoteSub v-if="appearNote.reply && !renoteCollapsed" :note="appearNote.reply" :class="$style.replyTo"/>
 	<div v-if="pinned" :class="$style.tip"><i class="ph-push-pin ph-bold ph-lg"></i> {{ i18n.ts.pinnedNote }}</div>
 	<!--<div v-if="appearNote._prId_" class="tip"><i class="ph-megaphone ph-bold ph-lg"></i> {{ i18n.ts.promotion }}<button class="_textButton hide" @click="readPromo()">{{ i18n.ts.hideThisNote }} <i class="ph-x ph-bold ph-lg"></i></button></div>-->
 	<!--<div v-if="appearNote._featuredId_" class="tip"><i class="ph-lightning ph-bold ph-lg"></i> {{ i18n.ts.featured }}</div>-->
@@ -208,7 +208,6 @@ const props = withDefaults(defineProps<{
 	note: Misskey.entities.Note;
 	pinned?: boolean;
 	mock?: boolean;
-	meta: Misskey.entities.LiteInstanceMetadata;
 }>(), {
 	mock: false,
 });
@@ -279,6 +278,7 @@ const translating = ref(false);
 const showTicker = (defaultStore.state.instanceTicker === 'always') || (defaultStore.state.instanceTicker === 'remote' && appearNote.user.instance);
 const canRenote = computed(() => ['public', 'home'].includes(appearNote.visibility) || (appearNote.visibility === 'followers' && appearNote.userId === $i.id));
 let renoteCollapsed = $ref(defaultStore.state.collapseRenotes && isRenote && (($i && ($i.id === note.userId || $i.id === appearNote.userId)) || (appearNote.myReaction != null)));
+const defaultLike = computed(() => defaultStore.state.like !== '❤️' ? defaultStore.state.like : null);
 
 const keymap = {
 	'r': () => reply(true),
@@ -510,9 +510,9 @@ function like(): void {
 	if (props.mock) {
 		return;
 	}
-	os.api('notes/reactions/create', {
+	os.api('notes/like', {
 		noteId: appearNote.id,
-		reaction: props.meta.defaultLike,
+		override: defaultLike.value,
 	});
 	const el = likeButton.value as HTMLElement | null | undefined;
 	if (el) {
@@ -531,9 +531,9 @@ function react(viaKeyboard = false): void {
 			return;
 		}
 
-		os.api('notes/reactions/create', {
+		os.api('notes/like', {
 			noteId: appearNote.id,
-			reaction: props.meta.defaultLike,
+			override: defaultLike.value,
 		});
 		const el = reactButton.value as HTMLElement | null | undefined;
 		if (el) {
